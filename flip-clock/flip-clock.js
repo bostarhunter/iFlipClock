@@ -194,7 +194,7 @@
     // 切换时间格式的函数
     function toggleHourFormat() {
         is24HourFormat = !is24HourFormat;
-        document.getElementById('hour-format-btn').textContent = is24HourFormat ? '24小时制' : '12小时制';
+        document.getElementById('hour-format-btn').textContent = is24HourFormat ? '24h Format' : '12h Format';
         // 更新时钟显示
         var clockComponent = document.querySelector('flip-clock');
         if (clockComponent && clockComponent.__vue__) {

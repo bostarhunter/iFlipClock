@@ -1,8 +1,9 @@
 // 全屏和缩放功能实现
  document.addEventListener('DOMContentLoaded', function() {
-     // 获取全屏按钮、缩放下拉框和时钟容器
+     // 获取全屏按钮、缩放下拉框、12小时制按钮和时钟容器
      const fullscreenBtn = document.getElementById('fullscreen-btn');
      const zoomSelect = document.getElementById('zoom-select');
+     const hourFormatBtn = document.getElementById('hour-format-btn');
      const clockContainer = document.querySelector('.test-clock-container');
      
      // 初始缩放级别设为中
@@ -65,7 +66,7 @@
      } else if (fullscreenBtn) {
          // 不支持全屏API时，禁用按钮
          fullscreenBtn.disabled = true;
-         fullscreenBtn.textContent = '浏览器不支持全屏';
+         fullscreenBtn.textContent = 'Fullscreen not supported';
      }
      
      // 切换全屏模式
@@ -101,21 +102,21 @@
      // 显示所有控制按钮
      function showFullscreenBtn() {
          // 清除之前的定时器
-         [fullscreenBtn, zoomSelect].forEach(btn => {
+         [fullscreenBtn, zoomSelect, hourFormatBtn].forEach(btn => {
              if (btn) {
                  clearTimeout(btn.hideTimer);
              }
          });
          
          // 显示按钮和下拉框
-         [fullscreenBtn, zoomSelect].forEach(btn => {
+         [fullscreenBtn, zoomSelect, hourFormatBtn].forEach(btn => {
              if (btn) {
                  btn.style.opacity = '1';
              }
          });
          
          // 设置定时器，3秒后隐藏按钮
-         [fullscreenBtn, zoomSelect].forEach(btn => {
+         [fullscreenBtn, zoomSelect, hourFormatBtn].forEach(btn => {
              if (btn) {
                  btn.hideTimer = setTimeout(hideFullscreenBtn, 3000);
              }
@@ -124,7 +125,7 @@
      
      // 隐藏所有控制按钮
      function hideFullscreenBtn() {
-         [fullscreenBtn, zoomSelect].forEach(btn => {
+         [fullscreenBtn, zoomSelect, hourFormatBtn].forEach(btn => {
              if (btn) {
                  btn.style.opacity = '0';
              }
@@ -146,7 +147,7 @@
              updateZoom(scale);
              // 进入全屏
              document.body.classList.add('fullscreen');
-             fullscreenBtn.textContent = '退出全屏';
+             fullscreenBtn.textContent = 'Full Screen';
              
              // 获取全屏元素 (top-layer)
              const fullscreenElement = document.fullscreenElement || 
@@ -154,12 +155,16 @@
                  document.mozFullScreenElement || 
                  document.msFullscreenElement;
              
+             // 保存按钮的原始父容器
+             const originalParent = fullscreenBtn.parentNode;
+             
              // 将按钮和下拉框添加到 top-layer 元素
-             [fullscreenBtn, zoomSelect].forEach(btn => {
+             [hourFormatBtn, fullscreenBtn, zoomSelect].forEach(btn => {
                  if (btn && fullscreenElement && btn.parentNode !== fullscreenElement) {
-                     // 保存按钮的原始位置
+                     // 保存按钮的原始位置和样式
                      btn._originalParent = btn.parentNode;
                      btn._originalNextSibling = btn.nextSibling;
+                     btn._originalStyle = btn.getAttribute('style') || '';
                      
                      // 将按钮添加到全屏元素
                      fullscreenElement.appendChild(btn);
@@ -167,7 +172,7 @@
              });
              
              // 默认隐藏按钮和下拉框
-             [fullscreenBtn, zoomSelect].forEach(btn => {
+             [hourFormatBtn, fullscreenBtn, zoomSelect].forEach(btn => {
                  if (btn) {
                      btn.style.opacity = '0';
                      btn.style.zIndex = '2000';
@@ -177,6 +182,11 @@
              });
              
              // 设置按钮和下拉框位置
+             if (hourFormatBtn) {
+                 hourFormatBtn.style.top = '20px';
+                 hourFormatBtn.style.right = '240px';
+                 hourFormatBtn.style.marginRight = '10px';
+             }
              if (fullscreenBtn) {
                  fullscreenBtn.style.top = '20px';
                  fullscreenBtn.style.right = '120px';
@@ -192,30 +202,37 @@
          } else {
                  // 退出全屏
                  document.body.classList.remove('fullscreen');
-                 fullscreenBtn.textContent = '全屏显示';
+                 fullscreenBtn.textContent = 'Full Screen';
                  
                  // 恢复原始缩放级别
                  if (clockContainer._originalScale !== undefined) {
                      updateZoom(clockContainer._originalScale);
                      delete clockContainer._originalScale;
                  }
-             
+              
              // 移除鼠标移动事件监听器
              document.removeEventListener('mousemove', showFullscreenBtn);
              
              // 清除所有按钮的定时器
-             [fullscreenBtn, zoomSelect].forEach(btn => {
+             [hourFormatBtn, fullscreenBtn, zoomSelect].forEach(btn => {
                  if (btn) {
                      clearTimeout(btn.hideTimer);
                  }
              });
              
-             // 恢复按钮可见性
-             fullscreenBtn.style.opacity = '1';
-             
-             // 将按钮和下拉框移回原始位置
-             [fullscreenBtn, zoomSelect].forEach(btn => {
-                 if (btn && btn._originalParent && btn.parentNode !== btn._originalParent) {
+             // 按原始顺序将按钮移回原始位置并恢复原始样式
+             [hourFormatBtn, fullscreenBtn, zoomSelect].forEach(btn => {
+                 if (btn && btn._originalParent) {
+                     // 恢复原始样式
+                     if (btn._originalStyle !== undefined) {
+                         btn.setAttribute('style', btn._originalStyle);
+                         delete btn._originalStyle;
+                     } else {
+                         // 如果没有保存原始样式，清除所有内联样式
+                         btn.removeAttribute('style');
+                     }
+                     
+                     // 移回原始位置
                      if (btn._originalNextSibling) {
                          btn._originalParent.insertBefore(btn, btn._originalNextSibling);
                      } else {
