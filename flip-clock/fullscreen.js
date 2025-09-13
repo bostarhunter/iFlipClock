@@ -1,14 +1,62 @@
 // 全屏和缩放功能实现
  document.addEventListener('DOMContentLoaded', function() {
+     // 添加横屏提示元素
+     const rotatePrompt = document.createElement('div');
+     rotatePrompt.className = 'rotate-prompt';
+     rotatePrompt.textContent = 'Please rotate device to landscape for best experience';
+     document.body.appendChild(rotatePrompt);
+
+     // 检测是否为移动设备
+     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+     
+     // 默认在PC端隐藏提示
+     if (!isMobile) {
+         rotatePrompt.style.display = 'none';
+     }
      // 获取全屏按钮、缩放下拉框、12小时制按钮和时钟容器
      const fullscreenBtn = document.getElementById('fullscreen-btn');
      const zoomSelect = document.getElementById('zoom-select');
      const hourFormatBtn = document.getElementById('hour-format-btn');
      const clockContainer = document.querySelector('.test-clock-container');
      
+     // 检测屏幕方向
+     function isPortrait() {
+         return window.innerHeight > window.innerWidth;
+     }
+     
+     // 强制横屏
+     function forceLandscape() {
+         document.body.classList.add('force-landscape');
+     }
+     
+     // 取消强制横屏
+     function cancelForceLandscape() {
+         document.body.classList.remove('force-landscape');
+     }
+     
      // 初始缩放级别设为中
      let scale = 1.0; // 这个值会在DOM加载后立即更新为medium
      const maxScale = 3.0;
+     
+     // 移动设备检测并显示提示
+     if (isMobile) {
+         // 检查初始方向
+         if (isPortrait()) {
+             rotatePrompt.style.display = 'flex';
+         }
+         
+         // 添加全局方向变化监听器，处理提示显示/隐藏
+         window.addEventListener('resize', function handleOrientationChange() {
+             // 仅在非全屏状态下处理提示的显示/隐藏
+             if (!document.fullscreenElement) {
+                 if (isPortrait()) {
+                     rotatePrompt.style.display = 'flex';
+                 } else {
+                     rotatePrompt.style.display = 'none';
+                 }
+             }
+         });
+     }
      // 定义三个缩放级别
      const scaleLevels = {
          small: 0.8,  // 缩小
@@ -43,9 +91,15 @@
      }
      
      if (zoomSelect && clockContainer) {
-         // 设置初始缩放级别为中
-         zoomSelect.value = 'medium';
-         updateZoom(scaleLevels.medium);
+        if(isMobile){
+            zoomSelect.value = 'small';
+            updateZoom(scaleLevels.small);
+        }else{
+            // 设置初始缩放级别为中
+            zoomSelect.value = 'medium';
+            updateZoom(scaleLevels.medium);
+        }
+         
           
          // 添加缩放下拉框事件监听器
          zoomSelect.addEventListener('change', (e) => {
@@ -76,6 +130,26 @@
              !document.mozFullScreenElement && 
              !document.msFullscreenElement) {
              // 进入全屏
+             if (isMobile) {
+         // 移动设备下，先检查方向
+         if (isPortrait()) {
+             // 如果是竖屏，强制横屏
+             forceLandscape();
+             rotatePrompt.style.display = 'none'; // 全屏后隐藏提示
+         }
+          
+         // 添加方向变化监听器
+         function orientationChangeHandler() {
+             if (isPortrait() && document.fullscreenElement) {
+                 forceLandscape();
+             }
+         }
+          
+         // 保存监听器引用以便后续移除
+         clockContainer._orientationHandler = orientationChangeHandler;
+         window.addEventListener('resize', orientationChangeHandler);
+     }
+              
              if (clockContainer.requestFullscreen) {
                  clockContainer.requestFullscreen();
              } else if (clockContainer.webkitRequestFullscreen) {
@@ -200,15 +274,25 @@
              // 添加鼠标移动事件监听器
              document.addEventListener('mousemove', showFullscreenBtn);
          } else {
-                 // 退出全屏
-                 document.body.classList.remove('fullscreen');
-                 fullscreenBtn.textContent = 'Full Screen';
-                 
-                 // 恢复原始缩放级别
-                 if (clockContainer._originalScale !== undefined) {
-                     updateZoom(clockContainer._originalScale);
-                     delete clockContainer._originalScale;
+             // 退出全屏
+             document.body.classList.remove('fullscreen');
+             fullscreenBtn.textContent = 'Full Screen';
+              
+             // 恢复原始缩放级别
+             if (clockContainer._originalScale !== undefined) {
+                 updateZoom(clockContainer._originalScale);
+                 delete clockContainer._originalScale;
+             }
+              
+             if (isMobile) {
+                 // 退出全屏时移除方向变化监听
+                 if (clockContainer._orientationHandler) {
+                     window.removeEventListener('resize', clockContainer._orientationHandler);
+                     delete clockContainer._orientationHandler;
                  }
+                 cancelForceLandscape();
+                 rotatePrompt.style.display = 'none';
+             }
               
              // 移除鼠标移动事件监听器
              document.removeEventListener('mousemove', showFullscreenBtn);
